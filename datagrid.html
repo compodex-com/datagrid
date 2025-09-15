@@ -1,0 +1,2109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compodex Advanced Data Grid with AI Query - v2.0</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            padding: 30px;
+            color: white;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .ai-query-section {
+            padding: 25px;
+            background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .ai-query-container {
+            display: flex;
+            gap: 15px;
+            align-items: end;
+            max-width: 800px;
+        }
+
+        .query-group {
+            flex: 1;
+        }
+
+        .query-label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+            font-size: 1rem;
+        }
+
+        .query-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .query-input:focus {
+            outline: none;
+            border-color: #4facfe;
+            box-shadow: 0 0 0 3px rgba(79, 172, 254, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .query-button {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .query-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.6);
+        }
+
+        .query-button:active {
+            transform: translateY(0);
+        }
+
+        .query-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .controls {
+            padding: 20px 25px;
+            background: #f8f9fa;
+            border-bottom: 2px solid #e0e0e0;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-input, .control-select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .control-button {
+            padding: 8px 16px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background 0.3s ease;
+        }
+
+        .control-button:hover {
+            background: #0056b3;
+        }
+
+        .grid-container {
+            padding: 25px;
+            height: 600px;
+            overflow: hidden;
+        }
+
+        .data-grid {
+            width: 100%;
+            height: 100%;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            overflow: hidden;
+            background: white;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .grid-header {
+            display: flex;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-bottom: 2px solid #dee2e6;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .grid-cell, .grid-header-cell {
+            padding: 12px 16px;
+            border-right: 1px solid #dee2e6;
+            flex: 1;
+            min-width: 120px;
+            display: flex;
+            align-items: center;
+            position: relative;
+        }
+
+        .grid-header-cell {
+            background: linear-gradient(135deg, #f1f3f4 0%, #e8eaed 100%);
+            cursor: pointer;
+            transition: background 0.3s ease;
+            user-select: none;
+        }
+
+        .grid-header-cell:hover {
+            background: linear-gradient(135deg, #e8f0fe 0%, #d2e3fc 100%);
+        }
+
+        .grid-header-cell.sortable::after {
+            content: '↕';
+            margin-left: 8px;
+            opacity: 0.5;
+        }
+
+        .grid-header-cell.sort-asc::after {
+            content: '↑';
+            opacity: 1;
+            color: #007bff;
+        }
+
+        .grid-header-cell.sort-desc::after {
+            content: '↓';
+            opacity: 1;
+            color: #007bff;
+        }
+
+        .grid-body {
+            height: calc(100% - 50px);
+            overflow: auto;
+        }
+
+        .grid-row {
+            display: flex;
+            border-bottom: 1px solid #e9ecef;
+            transition: background 0.2s ease;
+        }
+
+        .grid-row:hover {
+            background: linear-gradient(135deg, #f8f9ff 0%, #f0f4ff 100%);
+        }
+
+        .grid-row.selected {
+            background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+        }
+
+        .grid-row.group-header {
+            background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .grid-cell {
+            transition: all 0.2s ease;
+        }
+
+        .grid-cell.editing {
+            padding: 0;
+        }
+
+        .grid-cell input {
+            width: 100%;
+            height: 100%;
+            border: none;
+            padding: 12px 16px;
+            font-size: inherit;
+            background: #fff8e1;
+            border: 2px solid #ffc107;
+        }
+
+        .grid-cell input:focus {
+            outline: none;
+            background: white;
+            border-color: #007bff;
+        }
+
+        .pagination {
+            padding: 20px 25px;
+            background: #f8f9fa;
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            border-top: 2px solid #e0e0e0;
+        }
+
+        .pagination-info {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .pagination-controls {
+            display: flex;
+            gap: 10px;
+            margin-left: auto;
+        }
+
+        .pagination-button {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            background: white;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+        }
+
+        .pagination-button:hover {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+
+        .pagination-button.active {
+            background: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+
+        .pagination-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .status-bar {
+            padding: 15px 25px;
+            background: #e9ecef;
+            color: #495057;
+            font-size: 0.9rem;
+            border-top: 1px solid #dee2e6;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px 25px;
+            border-left: 4px solid #dc3545;
+            margin: 10px 0;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px 25px;
+            border-left: 4px solid #28a745;
+            margin: 10px 0;
+        }
+
+        .filter-row {
+            display: flex;
+            background: #f1f3f4;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .filter-cell {
+            padding: 8px 12px;
+            border-right: 1px solid #dee2e6;
+            flex: 1;
+            min-width: 120px;
+        }
+
+        .filter-input {
+            width: 100%;
+            padding: 6px 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 0.85rem;
+        }
+
+        .group-toggle {
+            margin-right: 8px;
+            cursor: pointer;
+            user-select: none;
+            font-weight: bold;
+        }
+
+        .license-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .license-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+        }
+
+        .license-content h3 {
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .license-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .license-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .license-button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        .license-button.primary {
+            background: #007bff;
+            color: white;
+        }
+
+        .license-button.secondary {
+            background: #6c757d;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Compodex Advanced Data Grid v2.0</h1>
+            <p>Professional data management with AI-powered querying - Fresh Build</p>
+        </div>
+		<!--Auth section Beginning-->
+		<div class="space-y-4">
+		  <h2 class="text-xl font-semibold">🔑 Login</h2>
+		  <input id="email" type="email" placeholder="Email"
+			class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+		  <input id="password" type="password" placeholder="Password"
+			class="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500">
+		  <div class="flex gap-2">
+			<button id="loginBtn" onclick="login()" class="query-button">
+			  Login
+			</button>
+			<button id="btnUsage" style="display:none" class="query-button">Get Token Usage</button>
+			<button id="logoutBtn" onclick="logout()" style="display:none" class="query-button">
+			  Logout
+			</button>		
+		  </div>
+		  <p id="authStatus" class="text-sm text-gray-600 whitespace-pre-wrap"></p>
+		</div>
+
+        <div class="ai-query-section">
+            <div class="ai-query-container">
+                <div class="query-group">
+                    <label for="aiQuery" class="query-label">AI Query</label>
+                    <input type="text" id="aiQuery" class="query-input" 
+                           placeholder="Enter natural language query (e.g., 'Show employees with salary > 50000')">
+                </div>
+                <button id="executeQuery" class="query-button">Execute AI Query</button>
+            </div>
+        </div>
+		
+		  <!-- Professional Reminder -->
+		  <div style="margin-top:15px; padding:12px; background:#fef9e7; border:1px solid #f5c26b; border-radius:8px; font-size:0.9rem; color:#555;">
+			💡 <strong>Reminder:</strong> The data grid itself is <strong>completely free</strong> to use.  
+			You only need a <strong>license</strong> if you want to use the <em>AI-powered query</em> feature,  
+			because AI queries consume tokens that we pay for.
+		  </div>
+		<!--Auth section End-->
+		
+        <div class="controls">
+            <div class="control-group">
+                <label>Search:</label>
+                <input type="text" id="globalSearch" class="control-input" placeholder="Global search...">
+            </div>
+            <div class="control-group">
+                <label>Page Size:</label>
+                <select id="pageSize" class="control-select">
+                    <option value="10">10</option>
+                    <option value="25" selected>25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <button id="addRow" class="control-button">Add Row</button>
+                <button id="deleteSelected" class="control-button">Delete Selected</button>
+                <button id="exportData" class="control-button">Export CSV</button>
+                <button id="toggleGrouping" class="control-button">Toggle Grouping</button>
+            </div>
+        </div>
+
+        <div id="statusMessage"></div>
+
+        <div class="grid-container">
+            <div class="data-grid">
+                <div class="grid-header" id="gridHeader"></div>
+                <div class="filter-row" id="filterRow" style="display: none;"></div>
+                <div class="grid-body" id="gridBody">
+                    <div class="loading">Initializing system...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="pagination">
+            <div class="pagination-info" id="paginationInfo"></div>
+            <div class="pagination-controls" id="paginationControls"></div>
+        </div>
+
+        <div class="status-bar" id="statusBar">
+            Starting fresh initialization...
+        </div>
+    </div>
+
+    <script>
+		const API_BASE = "https://compodex.com/api";
+		let token = null;
+        console.log('🚀 Advanced Data Grid v2.0 - Fresh initialization starting...');
+
+window.addEventListener("DOMContentLoaded", () => {
+  const savedToken = localStorage.getItem("jwtToken");
+  if (savedToken) {
+    token = savedToken;
+    updateAuthUI(true);
+  } else {
+    updateAuthUI(false);
+  }
+});
+
+	  async function login() {
+		try {
+		  const email = document.getElementById("email").value;
+		  const password = document.getElementById("password").value;
+
+		  const res = await fetch("https://compodex.com/api/auth/login", {
+			method: "POST",
+			headers: { "Content-Type": "application/json" },
+			body: JSON.stringify({ email, password })
+		  });
+
+		  const data = await res.json();
+
+		  if (!res.ok || !data.success) {
+			alert(data.error || "Login failed");
+			return;
+		  }
+		  token = data.token;
+		  window.localStorage.setItem("jwtToken", token);
+		  authStatus.textContent = "Access granted.";
+		  updateAuthUI(true);
+		} catch (err) {
+		  console.error("Login failed:", err);
+		  authStatus.textContent = "❌ Login request failed.";
+		}
+	  }
+	  
+function logout() {
+  token = null;
+  localStorage.removeItem("jwtToken");
+  authStatus.textContent = "🔒 Logged out.";
+  updateAuthUI(false);
+}
+
+function updateAuthUI(isLoggedIn) {
+  const loginBtn = document.getElementById("loginBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+  const usageBtn = document.getElementById("btnUsage");  
+
+  if (isLoggedIn) {
+    loginBtn.style.display = "none";
+	usageBtn.style.display = "block";
+    logoutBtn.style.display = "block"; // or "flex" if you want same styling
+  } else {
+    loginBtn.style.display = "block";  // or "flex"
+	usageBtn.style.display = "none";
+    logoutBtn.style.display = "none";
+  }
+}
+	  
+		
+        class DataGridManager {
+            constructor() {
+                this.sqliteLib = null;
+                this.database = null;
+                this.records = [];
+                this.displayRecords = [];
+                this.columns = [];
+                this.currentPage = 1;
+                this.pageSize = 25;
+                this.sortConfig = { column: null, direction: 'asc' };
+                this.filters = {};
+                this.selectedRows = new Set();
+                this.groupBy = null;
+                this.editingCell = null;
+                this.licenseInfo = null;
+                this.systemReady = false;
+                
+                this.log('DataGridManager created');
+                this.startInitialization();
+            }
+
+            log(message) {
+                console.log(`[DataGrid] ${message}`);
+            }
+
+            updateStatusBar(message) {
+                const statusBar = document.getElementById('statusBar');
+                if (statusBar) {
+                    statusBar.textContent = message;
+                }
+                this.log(`Status: ${message}`);
+            }
+
+            async startInitialization() {
+                try {
+                    this.updateStatusBar('Loading SQLite engine...');
+                    await this.loadSQLiteEngine();
+                    
+                    this.updateStatusBar('Creating database schema...');
+                    await this.createDatabaseSchema();
+                    
+                    // CHANGED: Try API first, only load sample data if API fails
+                    this.updateStatusBar('Loading customer data from API...');
+                    await this.loadDefaultData();
+                    
+                    this.updateStatusBar('Setting up user interface...');
+                    this.setupEventHandlers();
+                    
+                    this.systemReady = true;
+                    this.updateStatusBar(`✅ System ready - ${this.records.length} customer records loaded`);					
+                } catch (error) {
+                    this.log(`❌ API loading failed: ${error.message}`);
+                    this.updateStatusBar(`⚠️ API failed, loading sample data...`);
+                    
+                    // Fallback to sample data only if API fails
+                    try {
+                        await this.loadSampleDataAsFallback();
+                        this.setupEventHandlers();
+                        this.systemReady = true;
+                        this.updateStatusBar(`⚠️ Using sample data - API connection failed`);
+                    } catch (fallbackError) {
+                        this.log(`❌ Fallback failed: ${fallbackError.message}`);
+                        this.updateStatusBar(`❌ Complete initialization failed`);
+                        this.showErrorMessage(`System initialization failed: ${fallbackError.message}`);
+                    }
+                }
+            }
+
+            async loadSampleDataAsFallback() {
+                // Create employees table for sample data
+                this.database.run(`
+                    CREATE TABLE IF NOT EXISTS employees (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        name TEXT NOT NULL,
+                        email TEXT,
+                        department TEXT,
+                        salary INTEGER,
+                        hire_date DATE,
+                        active BOOLEAN DEFAULT 1,
+                        performance_score REAL
+                    )
+                `);
+                
+                await this.insertSampleEmployees();
+                this.currentTable = 'employees';
+                this.loadRecordsFromDatabase('employees');
+                this.log('✅ Sample data loaded as fallback');
+            }
+
+            async loadDefaultData() {
+                try {
+                    // Try to load from your customer API
+                    //await this.bindToAPI('https://compodex.com/api/data/customers', {
+                        //tableName: 'customers', primaryKey: 'id'});
+                    
+					// Test your MySQL connection
+					await this.bindToMySQLViaAPI({
+						host: '192.168.0.103',
+						port: 3306,
+						user: 'admin',
+						password: 'b8541C6269s',
+						database: 'SP500',
+						table: 'avgprice',
+						apiEndpoint: 'https://compodex.com/api/data/mysql-proxy'
+					});
+					
+                    this.log('✅ Successfully loaded customer data from API');
+                    
+                } catch (error) {
+                    this.log(`❌ Failed to load customer data: ${error.message}`);
+                    throw error; // This will trigger the fallback to sample data
+                }
+            }
+
+			async bindToMySQLViaAPI(config) {
+				try {
+					this.updateStatusBar('Connecting to MySQL via API bridge...');				
+					const requestBody = {
+						host: config.host,
+						port: config.port,
+						user: config.user,
+						password: config.password,
+						database: config.database,
+						table: config.table,
+						query: config.query || `SELECT * FROM ${config.table} LIMIT 1000`
+					};
+
+					const response = await fetch(config.apiEndpoint, {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify(requestBody)
+					});
+
+					if (!response.ok) {
+						throw new Error(`MySQL API bridge failed: ${response.status} ${response.statusText}`);
+					}
+					const data = await response.json();				
+					this.dataSource = {
+						type: 'mysql',
+						config: config,
+						lastFetched: new Date()
+					};
+					await this.bindToJSON(data, config.table);
+					this.showSuccessMessage(`Successfully connected to MySQL: ${data.length} records loaded`);
+					
+				} catch (error) {
+					console.error('MySQL binding failed:', error);
+					this.showErrorMessage(`MySQL binding failed: ${error.message}`);
+					throw error;
+				}
+			}
+
+            async loadSQLiteEngine() {
+                this.sqliteLib = await initSqlJs({
+                    locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}`
+                });
+                this.log('✅ SQLite engine loaded successfully');
+            }
+
+            async createDatabaseSchema() {
+                this.database = new this.sqliteLib.Database();
+                
+                const createTableSQL = `
+                    CREATE TABLE employees (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        name TEXT NOT NULL,
+                        email TEXT,
+                        department TEXT,
+                        salary INTEGER,
+                        hire_date DATE,
+                        active BOOLEAN DEFAULT 1,
+                        performance_score REAL
+                    )
+                `;
+                
+                this.database.run(createTableSQL);
+                
+                // Verify table creation
+                const tables = this.database.exec("SELECT name FROM sqlite_master WHERE type='table' AND name='employees'");
+                if (tables.length === 0) {
+                    throw new Error('Failed to create employees table');
+                }
+                
+                this.log('✅ Database schema created successfully');
+            }
+
+            async insertSampleEmployees() {
+                const employees = [
+                    ['John Doe', 'john@example.com', 'Engineering', 75000, '2020-01-15', 1, 4.2],
+                    ['Jane Smith', 'jane@example.com', 'Marketing', 65000, '2019-03-22', 1, 4.8],
+                    ['Mike Johnson', 'mike@example.com', 'Sales', 55000, '2021-06-10', 1, 3.9],
+                    ['Sarah Wilson', 'sarah@example.com', 'Engineering', 82000, '2018-09-05', 1, 4.5],
+                    ['David Brown', 'david@example.com', 'HR', 60000, '2020-11-12', 1, 4.1],
+                    ['Lisa Davis', 'lisa@example.com', 'Engineering', 78000, '2019-07-20', 0, 4.3],
+                    ['Robert Miller', 'robert@example.com', 'Sales', 52000, '2022-01-08', 1, 3.7],
+                    ['Emily Taylor', 'emily@example.com', 'Marketing', 68000, '2020-04-15', 1, 4.6],
+                    ['James Anderson', 'james@example.com', 'Engineering', 85000, '2017-12-01', 1, 4.9],
+                    ['Mary Thomas', 'mary@example.com', 'HR', 58000, '2021-08-30', 1, 4.0]
+                ];
+
+                const insertSQL = `
+                    INSERT INTO employees (name, email, department, salary, hire_date, active, performance_score) 
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                `;
+
+                employees.forEach((emp, index) => {
+                    this.database.run(insertSQL, emp);
+                    this.log(`✅ Inserted employee ${index + 1}: ${emp[0]}`);
+                });
+
+                // Verify insertion
+                const count = this.database.exec("SELECT COUNT(*) FROM employees")[0].values[0][0];
+                this.log(`✅ Successfully inserted ${count} employee records`);
+            }
+
+			loadRecordsFromDatabase(tableName = null) {
+				const targetTable = tableName || this.currentTable || 'employees';
+				const result = this.database.exec(`SELECT * FROM ${targetTable} ORDER BY id`);
+				
+				if (result.length > 0) {
+					this.columns = result[0].columns;
+					this.records = result[0].values.map(row => {
+						const record = {};
+						this.columns.forEach((col, index) => {
+							record[col] = row[index];
+						});
+						return record;
+					});
+				} else {
+					this.records = [];
+					this.columns = [];
+				}
+				
+				this.applyFiltersAndSearch();
+				this.renderDataGrid();
+				this.log(`✅ Loaded ${this.records.length} records into grid from ${targetTable}`);
+			}
+
+            setupEventHandlers() {
+                // AI Query
+				document.getElementById("executeQuery").addEventListener("click", this.executeAIQuery.bind(this));
+                document.getElementById('aiQuery')?.addEventListener('keypress', (e) => {if (e.key === 'Enter') this.executeAIQuery();
+                });
+				document.getElementById("btnUsage").addEventListener("click", this.callTokenUsage.bind(this));
+                // Controls
+                document.getElementById('globalSearch')?.addEventListener('input', (e) => this.handleGlobalSearch(e.target.value));
+                document.getElementById('pageSize')?.addEventListener('change', (e) => this.changePageSize(parseInt(e.target.value)));
+                document.getElementById('addRow')?.addEventListener('click', () => this.addNewRow());
+                document.getElementById('deleteSelected')?.addEventListener('click', () => this.deleteSelectedRows());
+                document.getElementById('exportData')?.addEventListener('click', () => this.exportToCSV());
+                document.getElementById('toggleGrouping')?.addEventListener('click', () => this.toggleGrouping());
+
+                // License Modal
+                //document.getElementById('cancelLicense')?.addEventListener('click', () => this.hideLicenseModal());
+                //document.getElementById('submitLicense')?.addEventListener('click', () => this.submitLicense());
+                
+                // Grid events
+                document.getElementById('gridBody')?.addEventListener('click', (e) => this.handleGridClick(e));
+                document.getElementById('gridBody')?.addEventListener('dblclick', (e) => this.handleGridDoubleClick(e));
+                
+                this.log('✅ Event handlers set up successfully');
+            }
+
+            applyFiltersAndSearch() {
+                let filtered = [...this.records];
+                
+                // Apply column filters
+                Object.keys(this.filters).forEach(column => {
+                    const filterValue = this.filters[column]?.toLowerCase();
+                    if (filterValue) {
+                        filtered = filtered.filter(record => 
+                            String(record[column] || '').toLowerCase().includes(filterValue)
+                        );
+                    }
+                });
+
+                this.displayRecords = filtered;
+                this.currentPage = 1;
+            }
+
+            handleGlobalSearch(searchTerm) {
+                if (!searchTerm) {
+                    this.applyFiltersAndSearch();
+                    this.renderDataGrid();
+                    return;
+                }
+
+                const term = searchTerm.toLowerCase();
+                this.displayRecords = this.records.filter(record =>
+                    this.columns.some(col =>
+                        String(record[col] || '').toLowerCase().includes(term)
+                    )
+                );
+                
+                this.currentPage = 1;
+                this.renderDataGrid();
+            }
+
+            renderDataGrid() {
+                this.renderGridHeader();
+                this.renderFilterRow();
+                this.renderGridBody();
+                this.renderPagination();
+            }
+
+            renderGridHeader() {
+                const header = document.getElementById('gridHeader');
+                if (!header) return;
+                
+                header.innerHTML = '';
+                
+                // Selection checkbox column
+                const selectAllCell = document.createElement('div');
+                selectAllCell.className = 'grid-header-cell';
+                selectAllCell.style.minWidth = '50px';
+                selectAllCell.innerHTML = '<input type="checkbox" id="selectAll">';
+                header.appendChild(selectAllCell);
+
+                document.getElementById('selectAll')?.addEventListener('change', (e) => {
+                    this.selectAllRecords(e.target.checked);
+                });
+
+                // Data columns
+                this.columns.forEach(column => {
+                    const cell = document.createElement('div');
+                    cell.className = 'grid-header-cell sortable';
+                    cell.textContent = column;
+                    cell.dataset.column = column;
+                    
+                    if (this.sortConfig.column === column) {
+                        cell.classList.add(`sort-${this.sortConfig.direction}`);
+                    }
+                    
+                    cell.addEventListener('click', () => this.sortByColumn(column));
+                    header.appendChild(cell);
+                });
+            }
+
+            renderFilterRow() {
+                const filterRow = document.getElementById('filterRow');
+                if (!filterRow) return;
+                
+                filterRow.innerHTML = '';
+                filterRow.style.display = 'flex';
+                
+                // Empty cell for selection column
+                const emptyCell = document.createElement('div');
+                emptyCell.className = 'filter-cell';
+                emptyCell.style.minWidth = '50px';
+                filterRow.appendChild(emptyCell);
+
+                // Filter inputs for data columns
+                this.columns.forEach(column => {
+                    const cell = document.createElement('div');
+                    cell.className = 'filter-cell';
+                    
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.className = 'filter-input';
+                    input.placeholder = `Filter ${column}...`;
+                    input.value = this.filters[column] || '';
+                    
+                    input.addEventListener('input', (e) => {
+                        this.filters[column] = e.target.value;
+                        this.applyFiltersAndSearch();
+                        this.renderDataGrid();
+                    });
+                    
+                    cell.appendChild(input);
+                    filterRow.appendChild(cell);
+                });
+            }
+
+            renderGridBody() {
+                const body = document.getElementById('gridBody');
+                if (!body) return;
+                
+                body.innerHTML = '';
+
+                if (this.displayRecords.length === 0) {
+                    body.innerHTML = '<div class="loading">No records to display</div>';
+                    return;
+                }
+
+                const startIndex = (this.currentPage - 1) * this.pageSize;
+                const endIndex = Math.min(startIndex + this.pageSize, this.displayRecords.length);
+                const pageRecords = this.displayRecords.slice(startIndex, endIndex);
+
+                pageRecords.forEach((record, index) => {
+                    const rowElement = document.createElement('div');
+                    rowElement.className = 'grid-row';
+                    rowElement.dataset.rowIndex = index;
+                    
+                    if (this.selectedRows.has(record.id)) {
+                        rowElement.classList.add('selected');
+                    }
+
+                    // Selection checkbox
+                    const selectCell = document.createElement('div');
+                    selectCell.className = 'grid-cell';
+                    selectCell.style.minWidth = '50px';
+                    selectCell.innerHTML = `<input type="checkbox" ${this.selectedRows.has(record.id) ? 'checked' : ''}>`;
+                    rowElement.appendChild(selectCell);
+
+                    selectCell.querySelector('input')?.addEventListener('change', (e) => {
+                        this.toggleRecordSelection(record.id, e.target.checked);
+                    });
+
+                    // Data cells
+                    this.columns.forEach(column => {
+                        const cell = document.createElement('div');
+                        cell.className = 'grid-cell';
+                        cell.dataset.column = column;
+                        cell.dataset.recordId = record.id;
+                        
+                        let value = record[column];
+                        if (value === null || value === undefined) {
+                            value = '';
+                        }
+                        
+                        // Apply conditional formatting
+                        if (column === 'salary' && typeof value === 'number') {
+                            if (value > 70000) {
+                                cell.style.background = 'linear-gradient(135deg, #c8f7c5 0%, #a8e6cf 100%)';
+                                cell.style.fontWeight = 'bold';
+                            } else if (value < 60000) {
+                                cell.style.background = 'linear-gradient(135deg, #ffcccb 0%, #ffa8a8 100%)';
+                            }
+                        }
+                        
+                        if (column === 'active' && value === 0) {
+                            cell.style.background = 'linear-gradient(135deg, #ffe6e6 0%, #ffcccc 100%)';
+                            cell.style.color = '#666';
+                            value = 'Inactive';
+                        } else if (column === 'active' && value === 1) {
+                            value = 'Active';
+                        }
+                        
+                        if (column === 'performance_score' && typeof value === 'number') {
+                            if (value >= 4.5) {
+                                cell.style.background = 'linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%)';
+                                cell.style.color = '#155724';
+                            }
+                        }
+                        
+                        cell.textContent = value;
+                        rowElement.appendChild(cell);
+                    });
+
+                    body.appendChild(rowElement);
+                });
+            }
+
+            renderPagination() {
+                const info = document.getElementById('paginationInfo');
+                const controls = document.getElementById('paginationControls');
+                
+                if (!info || !controls) return;
+                
+                const totalItems = this.displayRecords.length;
+                const totalPages = Math.ceil(totalItems / this.pageSize);
+                const startItem = (this.currentPage - 1) * this.pageSize + 1;
+                const endItem = Math.min(this.currentPage * this.pageSize, totalItems);
+                
+                info.textContent = `Showing ${startItem}-${endItem} of ${totalItems} items`;
+                
+                controls.innerHTML = '';
+                
+                // Previous button
+                const prevBtn = document.createElement('button');
+                prevBtn.className = 'pagination-button';
+                prevBtn.textContent = '← Previous';
+                prevBtn.disabled = this.currentPage === 1;
+                prevBtn.addEventListener('click', () => this.goToPage(this.currentPage - 1));
+                controls.appendChild(prevBtn);
+                
+                // Page numbers
+                const startPage = Math.max(1, this.currentPage - 2);
+                const endPage = Math.min(totalPages, this.currentPage + 2);
+                
+                for (let i = startPage; i <= endPage; i++) {
+                    const pageBtn = document.createElement('button');
+                    pageBtn.className = 'pagination-button';
+                    if (i === this.currentPage) {
+                        pageBtn.classList.add('active');
+                    }
+                    pageBtn.textContent = i;
+                    pageBtn.addEventListener('click', () => this.goToPage(i));
+                    controls.appendChild(pageBtn);
+                }
+                
+                // Next button
+                const nextBtn = document.createElement('button');
+                nextBtn.className = 'pagination-button';
+                nextBtn.textContent = 'Next →';
+                nextBtn.disabled = this.currentPage === totalPages;
+                nextBtn.addEventListener('click', () => this.goToPage(this.currentPage + 1));
+                controls.appendChild(nextBtn);
+            }
+
+            sortByColumn(column) {
+                if (this.sortConfig.column === column) {
+                    this.sortConfig.direction = this.sortConfig.direction === 'asc' ? 'desc' : 'asc';
+                } else {
+                    this.sortConfig.column = column;
+                    this.sortConfig.direction = 'asc';
+                }
+                
+                this.displayRecords.sort((a, b) => {
+                    let aVal = a[column];
+                    let bVal = b[column];
+                    
+                    // Handle null/undefined values
+                    if (aVal === null || aVal === undefined) aVal = '';
+                    if (bVal === null || bVal === undefined) bVal = '';
+                    
+                    // Convert to appropriate types for comparison
+                    if (typeof aVal === 'string' && typeof bVal === 'string') {
+                        aVal = aVal.toLowerCase();
+                        bVal = bVal.toLowerCase();
+                    }
+                    
+                    let result = 0;
+                    if (aVal < bVal) result = -1;
+                    else if (aVal > bVal) result = 1;
+                    
+                    return this.sortConfig.direction === 'desc' ? -result : result;
+                });
+                
+                this.renderDataGrid();
+            }
+
+            goToPage(page) {
+                const totalPages = Math.ceil(this.displayRecords.length / this.pageSize);
+                if (page >= 1 && page <= totalPages) {
+                    this.currentPage = page;
+                    this.renderDataGrid();
+                }
+            }
+
+            changePageSize(size) {
+                this.pageSize = size;
+                this.currentPage = 1;
+                this.renderDataGrid();
+            }
+
+            toggleRecordSelection(recordId, selected) {
+                if (selected) {
+                    this.selectedRows.add(recordId);
+                } else {
+                    this.selectedRows.delete(recordId);
+                }
+                this.renderDataGrid();
+            }
+
+            selectAllRecords(selected) {
+                if (selected) {
+                    this.displayRecords.forEach(record => this.selectedRows.add(record.id));
+                } else {
+                    this.selectedRows.clear();
+                }
+                this.renderDataGrid();
+            }
+
+            handleGridClick(e) {
+                const cell = e.target.closest('.grid-cell');
+                if (!cell || !cell.dataset.column || !cell.dataset.recordId) return;
+                
+                // Handle row selection
+                const row = e.target.closest('.grid-row');
+                if (row && !row.classList.contains('group-header')) {
+                    const recordId = parseInt(cell.dataset.recordId);
+                    const isSelected = this.selectedRows.has(recordId);
+                    this.toggleRecordSelection(recordId, !isSelected);
+                }
+            }
+
+            handleGridDoubleClick(e) {
+                const cell = e.target.closest('.grid-cell');
+                if (!cell || !cell.dataset.column || !cell.dataset.recordId) return;
+                
+                this.startCellEdit(cell);
+            }
+
+            startCellEdit(cell) {
+                if (this.editingCell) {
+                    this.cancelCellEdit();
+                }
+                
+                this.editingCell = cell;
+                const currentValue = cell.textContent;
+                
+                cell.classList.add('editing');
+                cell.innerHTML = `<input type="text" value="${currentValue}" style="width: 100%; height: 100%; border: none; padding: 12px 16px;">`;
+                
+                const input = cell.querySelector('input');
+                input.focus();
+                input.select();
+                
+                input.addEventListener('blur', () => this.saveCellEdit());
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        this.saveCellEdit();
+                    } else if (e.key === 'Escape') {
+                        this.cancelCellEdit();
+                    }
+                });
+            }
+
+            saveCellEdit() {
+                if (!this.editingCell || !this.systemReady) return;
+                
+                const input = this.editingCell.querySelector('input');
+                const newValue = input.value;
+                const column = this.editingCell.dataset.column;
+                const recordId = parseInt(this.editingCell.dataset.recordId);
+                
+                try {
+                    // Update database
+                    this.database.run(`UPDATE employees SET ${column} = ? WHERE id = ?`, [newValue, recordId]);
+                    
+                    // Update local data
+                    const record = this.records.find(r => r.id === recordId);
+                    if (record) {
+                        record[column] = newValue;
+                    }
+                    
+                    this.editingCell.classList.remove('editing');
+                    this.editingCell.textContent = newValue;
+                    this.editingCell = null;
+                    
+                    this.showSuccessMessage('Cell updated successfully');
+                } catch (error) {
+                    console.error('Failed to update cell:', error);
+                    this.showErrorMessage('Failed to update cell');
+                    this.cancelCellEdit();
+                }
+            }
+
+            cancelCellEdit() {
+                if (!this.editingCell) return;
+                
+                const originalValue = this.editingCell.textContent;
+                this.editingCell.classList.remove('editing');
+                this.editingCell.textContent = originalValue;
+                this.editingCell = null;
+            }
+
+            addNewRow() {
+                if (!this.systemReady) {
+                    this.showErrorMessage('System not ready');
+                    return;
+                }
+                
+                try {
+                    this.database.run(`
+                        INSERT INTO employees (name, email, department, salary, hire_date, active, performance_score) 
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                    `, [
+                        'New Employee',
+                        'new@example.com',
+                        'General',
+                        50000,
+                        new Date().toISOString().split('T')[0],
+                        1,
+                        3.0
+                    ]);
+                    
+                    this.loadRecordsFromDatabase();
+                    this.showSuccessMessage('Employee added successfully');
+                } catch (error) {
+                    console.error('Failed to add row:', error);
+                    this.showErrorMessage('Failed to add employee');
+                }
+            }
+
+            deleteSelectedRows() {
+                if (this.selectedRows.size === 0) {
+                    this.showErrorMessage('No rows selected');
+                    return;
+                }
+                
+                if (!confirm(`Delete ${this.selectedRows.size} selected employees?`)) {
+                    return;
+                }
+                
+                try {
+                    const recordIds = Array.from(this.selectedRows);
+                    const placeholders = recordIds.map(() => '?').join(',');
+                    this.database.run(`DELETE FROM employees WHERE id IN (${placeholders})`, recordIds);
+                    
+                    this.selectedRows.clear();
+                    this.loadRecordsFromDatabase();
+                    this.showSuccessMessage(`${recordIds.length} employees deleted successfully`);
+                } catch (error) {
+                    console.error('Failed to delete rows:', error);
+                    this.showErrorMessage('Failed to delete employees');
+                }
+            }
+
+            toggleGrouping() {
+                if (this.groupBy === 'department') {
+                    this.groupBy = null;
+                    this.updateStatusBar('Grouping disabled');
+                } else {
+                    this.groupBy = 'department';
+                    this.updateStatusBar('Grouped by department');
+                }
+                this.renderDataGrid();
+            }
+
+            exportToCSV() {
+                try {
+                    const headers = this.columns.join(',');
+                    const rows = this.displayRecords.map(record => 
+                        this.columns.map(col => {
+                            const value = record[col] || '';
+                            return typeof value === 'string' && value.includes(',') 
+                                ? `"${value.replace(/"/g, '""')}"` 
+                                : value;
+                        }).join(',')
+                    );
+                    
+                    const csv = [headers, ...rows].join('\n');
+                    
+                    const blob = new Blob([csv], { type: 'text/csv' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'employees-export.csv';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    
+                    this.showSuccessMessage('Data exported successfully');
+                } catch (error) {
+                    console.error('Export failed:', error);
+                    this.showErrorMessage('Export failed');
+                }
+            }
+
+// Replace your existing executeAIQuery with this
+async executeAIQuery() {
+    // 1. Check if token is available in memory (from login response)
+    const token = window.localStorage.getItem("jwtToken");
+    if (!token) {
+        this.showErrorMessage("⚠️ Please login first!");
+        return;
+    }
+
+    const query = document.getElementById('aiQuery').value.trim();
+    if (!query) {
+        this.showErrorMessage('Please enter a query');
+        return;
+    }
+    try {
+        this.updateStatusBar('Processing AI query...');
+
+        // Detect table name
+        let tableName = null;
+        try {
+            const tables = this.database.exec("SELECT name FROM sqlite_master WHERE type='table'");
+            if (tables.length > 0 && tables[0].values.length > 0) {
+                const allTables = tables[0].values.map(row => row[0]);
+                console.log("Available tables:", allTables);
+
+                // Prefer customers > employees > ai_data
+                if (allTables.includes("customers")) {
+                    tableName = "customers";
+                } else if (allTables.includes("employees")) {
+                    tableName = "employees";
+                } else {
+                    tableName = allTables[0];
+                }
+            }
+        } catch (e) {
+            console.warn("Could not query sqlite_master:", e);
+        }
+
+        // If still no table, create ai_data
+        if (!tableName && this.records.length > 0) {
+            await this.createTableFromData(this.records, 'ai_data');
+            await this.insertDataIntoTable(this.records, 'ai_data');
+            this.currentTable = 'ai_data';
+            tableName = 'ai_data';
+        }
+		
+        if (!tableName) {
+            throw new Error("No valid table found in database");
+        }
+        const schema = this.getTableSchema();
+
+        // Resolve API base
+        const base = (typeof API_BASE !== 'undefined' && API_BASE) 
+            ? API_BASE.replace(/\/+$/, '') 
+            : 'https://compodex.com';
+
+        const url = `${base}/aiparser`;
+        // 2. Call backend with Bearer token instead of cookie
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`   // pass JWT in header
+            },
+            body: JSON.stringify({ query, schema })
+        });
+
+        if (!response.ok) {
+            throw new Error(`API error: ${response.status} ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        console.log('AI API raw response:', result);
+
+        if (result && result.success && result.sql) {
+            let sqlCommand = String(result.sql || "").trim();
+
+            console.log("Raw SQL from API:", sqlCommand);
+
+            // Cleanup
+            sqlCommand = sqlCommand.replace(/```sql/gi, "").replace(/```/g, "").trim();
+            sqlCommand = sqlCommand.replace(/^\s*sql[:\s-]*/i, "").trim();
+
+            // Rebuild using actual table name
+            const lower = sqlCommand.toLowerCase();
+            const selectIdx = lower.indexOf("select");
+            const fromIdx = lower.indexOf("from");
+            const whereIdx = lower.indexOf("where");
+
+            if (selectIdx !== -1 && fromIdx !== -1 && whereIdx !== -1) {
+                const columnsPart = sqlCommand.substring(selectIdx + 6, fromIdx).trim();
+                const conditionsPart = sqlCommand.substring(whereIdx + 5).trim();
+                sqlCommand = `SELECT ${columnsPart} FROM ${tableName} WHERE ${conditionsPart}`;
+            } else {
+                sqlCommand = `SELECT * FROM ${tableName}`;
+            }
+
+            console.log("Cleaned SQL:", sqlCommand);
+
+            await this.executeSQLCommand(sqlCommand);
+
+            this.showSuccessMessage(`AI Query executed: ${sqlCommand}`);
+            this.updateStatusBar('AI query completed successfully');
+        } else {
+            this.showErrorMessage('AI query API returned no SQL command');
+            this.updateStatusBar('AI query failed - no SQL returned');
+        }
+    } catch (err) {
+        console.error('AI Query failed:', err);
+        this.showErrorMessage('AI Query failed: ' + (err.message || err));
+        this.updateStatusBar('AI query failed');
+    }
+}
+
+// Replace (or add) executeSQLCommand with this robust implementation:
+async executeSQLCommand(sql) {
+    if (!sql || !sql.toString().trim()) {
+        this.showErrorMessage('Empty SQL command');
+        return;
+    }
+    try {
+        const raw = String(sql).trim();
+
+        if (raw != null) {
+            const results = this.database.exec(raw);
+            if (!results || results.length === 0) {
+                this.columns = [];
+                this.records = [];
+            } else {
+                const r = results[0];
+                this.columns = r.columns.slice();
+                this.records = r.values.map(row => {
+                    const obj = {};
+                    r.columns.forEach((col, idx) => obj[col] = row[idx]);
+                    return obj;
+                });
+            }
+
+            if (typeof this.applyFiltersAndSearch === 'function') this.applyFiltersAndSearch();
+            if (typeof this.renderDataGrid === 'function') this.renderDataGrid();
+
+        } else {
+            this.database.run(raw);
+            if (this.currentTable) {
+                try {
+                    const sel = `SELECT * FROM ${this.currentTable}`;
+                    const results = this.database.exec(sel);
+                    if (results && results.length > 0) {
+                        const r = results[0];
+                        this.columns = r.columns.slice();
+                        this.records = r.values.map(row => {
+                            const obj = {};
+                            r.columns.forEach((col, idx) => obj[col] = row[idx]);
+                            return obj;
+                        });
+                    } else {
+                        this.columns = [];
+                        this.records = [];
+                    }
+                } catch (innerErr) {
+                    console.warn('Failed to refresh table after non-SELECT SQL:', innerErr);
+                    this.columns = [];
+                    this.records = [];
+                }
+            }
+
+            if (typeof this.applyFiltersAndSearch === 'function') this.applyFiltersAndSearch();
+            if (typeof this.renderDataGrid === 'function') this.renderDataGrid();
+        }
+
+		} catch (error) {
+			console.error('SQL execution failed:', error);
+			this.showErrorMessage('SQL execution failed: ' + (error.message || error));
+			throw error;
+		}
+}
+
+			getTableSchema() {
+				try {
+					const table = this.currentTable || "employees";
+					const result = this.database.exec(`PRAGMA table_info(${table})`);
+					if (result.length > 0) {
+						return result[0].values
+							.map(row => `${row[1]} ${row[2]}`)
+							.join(", ");
+					}
+					return "";
+				} catch (error) {
+					console.error("Failed to get schema:", error);
+					return "";
+				}
+			}
+
+    async callTokenUsage() {
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+		alert("No token in localStorage");
+        return;
+      }
+
+      try {
+	    const url = `${base}/gettokenusage`;
+        const response = await fetch(url, {
+          headers: {
+            "Authorization": "Bearer " + token,
+          },
+        });		
+		const data = await response.json();
+		const formatted = JSON.stringify(data, null, 2);
+		alert(formatted);		
+      } catch (err) {
+		alert("Error: " + err);
+      }
+    }
+
+
+            showSuccessMessage(message) {
+                this.showMessage(message, 'success');
+            }
+
+            showErrorMessage(message) {
+                this.showMessage(message, 'error');
+            }
+
+            showMessage(message, type) {
+                const statusMessage = document.getElementById('statusMessage');
+                if (statusMessage) {
+                    statusMessage.innerHTML = `<div class="${type}">${message}</div>`;
+                    
+                    setTimeout(() => {
+                        statusMessage.innerHTML = '';
+                    }, 5000);
+                }
+            }
+
+            // ================================
+            // DATA BINDING METHODS
+            // ================================
+
+            /**
+             * Bind to REST API endpoint
+             * @param {string} url - API endpoint URL
+             * @param {Object} options - Configuration options
+             */
+            async bindToAPI(url, options = {}) {
+                try {
+                    this.updateStatusBar('Connecting to API...');
+                    this.log(`🔗 Attempting to connect to: ${url}`);
+                    
+                    const config = {
+                        method: 'GET',
+                        headers: { 'Content-Type': 'application/json' },
+                        dataPath: null,
+                        primaryKey: 'id',
+                        tableName: 'api_data',
+                        columnMapping: {},
+                        ...options
+                    };
+
+                    const response = await fetch(url, {
+                        method: config.method,
+                        headers: config.headers
+                    });
+
+                    this.log(`📡 API Response Status: ${response.status} ${response.statusText}`);
+
+                    if (!response.ok) {
+                        throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+                    }
+
+                    let data = await response.json();
+                    this.log('📋 Raw API Response:', JSON.stringify(data).substring(0, 200) + '...');
+                    
+                    // Navigate to nested data if dataPath specified
+                    if (config.dataPath) {
+                        const path = config.dataPath.split('.');
+                        for (const key of path) {
+                            if (data && typeof data === 'object' && key in data) {
+                                data = data[key];
+                            } else {
+                                throw new Error(`Data path '${config.dataPath}' not found in response`);
+                            }
+                        }
+                        this.log(`📍 Extracted data from path '${config.dataPath}':`, JSON.stringify(data).substring(0, 200) + '...');
+                    }
+
+                    // Handle different JSON response formats
+                    if (!Array.isArray(data)) {
+                        this.log('⚠️ Response is not an array, checking for common patterns...');
+                        
+                        // Check common response patterns
+                        if (data.data && Array.isArray(data.data)) {
+                            this.log('✅ Found array at data.data');
+                            data = data.data;
+                        } else if (data.customers && Array.isArray(data.customers)) {
+                            this.log('✅ Found array at data.customers');
+                            data = data.customers;
+                        } else if (data.results && Array.isArray(data.results)) {
+                            this.log('✅ Found array at data.results');
+                            data = data.results;
+                        } else if (data.items && Array.isArray(data.items)) {
+                            this.log('✅ Found array at data.items');
+                            data = data.items;
+                        } else {
+                            // Try to convert single object to array
+                            if (typeof data === 'object' && data !== null) {
+                                this.log('🔄 Converting single object to array');
+                                data = [data];
+                            } else {
+                                throw new Error(`API response is not an array or object. Got: ${typeof data}. Response: ${JSON.stringify(data)}`);
+                            }
+                        }
+                    }
+
+                    if (data.length === 0) {
+                        throw new Error('API returned empty array');
+                    }
+
+                    this.log(`✅ Successfully parsed ${data.length} records from API`);
+                    this.log('📝 Sample record:', JSON.stringify(data[0]));
+
+                    this.dataSource = {
+                        type: 'api',
+                        url: url,
+                        config: config,
+                        lastFetched: new Date()
+                    };
+
+                    await this.bindToJSON(data, config.tableName, config.columnMapping);
+                    this.showSuccessMessage(`Successfully bound to API: ${data.length} records loaded`);
+                    
+                } catch (error) {
+                    console.error('API binding failed:', error);
+                    this.showErrorMessage(`API binding failed: ${error.message}`);
+                    throw error; // Re-throw to trigger fallback
+                }
+            }
+
+            /**
+             * Bind to JSON data array
+             * @param {Array} data - Array of objects
+             * @param {string} tableName - Name for the table
+             * @param {Object} columnMapping - Column name mapping
+             */
+            async bindToJSON(data, tableName = 'json_data', columnMapping = {}) {
+                try {
+                    this.updateStatusBar('Processing JSON data...');
+
+                    if (!Array.isArray(data) || data.length === 0) {
+                        throw new Error('Invalid JSON data: must be non-empty array');
+                    }
+
+                    // Apply column mapping
+                    if (Object.keys(columnMapping).length > 0) {
+                        data = data.map(row => {
+                            const mappedRow = { ...row };
+                            Object.entries(columnMapping).forEach(([oldName, newName]) => {
+                                if (oldName in mappedRow) {
+                                    mappedRow[newName] = mappedRow[oldName];
+                                    delete mappedRow[oldName];
+                                }
+                            });
+                            return mappedRow;
+                        });
+                    }
+
+                    // Create new table
+                    await this.createTableFromData(data, tableName);
+                    
+                    // Insert data
+                    await this.insertDataIntoTable(data, tableName);
+                    
+                    this.currentTable = tableName;
+                    this.loadRecordsFromDatabase(tableName);
+                    
+                    this.showSuccessMessage(`Successfully bound to JSON: ${data.length} records loaded`);
+                    
+                } catch (error) {
+                    console.error('JSON binding failed:', error);
+                    this.showErrorMessage(`JSON binding failed: ${error.message}`);
+                }
+            }
+
+            /**
+             * Bind to CSV data
+             * @param {string} csvData - CSV string data
+             * @param {string} tableName - Name for the table
+             */
+            async bindToCSV(csvData, tableName = 'csv_data') {
+                try {
+                    this.updateStatusBar('Parsing CSV data...');
+                    
+                    const lines = csvData.trim().split('\n');
+                    if (lines.length < 2) {
+                        throw new Error('CSV must have at least header and one data row');
+                    }
+
+                    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+                    const data = [];
+
+                    for (let i = 1; i < lines.length; i++) {
+                        const values = this.parseCSVLine(lines[i]);
+                        if (values.length === headers.length) {
+                            const row = {};
+                            headers.forEach((header, index) => {
+                                row[header] = values[index];
+                            });
+                            data.push(row);
+                        }
+                    }
+
+                    await this.bindToJSON(data, tableName);
+                    
+                } catch (error) {
+                    console.error('CSV binding failed:', error);
+                    this.showErrorMessage(`CSV binding failed: ${error.message}`);
+                }
+            }
+
+            /**
+             * Bind to custom data source with fetch/update functions
+             * @param {Object} config - Configuration with fetch/update functions
+             */
+            async bindToCustomSource(config) {
+                try {
+                    this.updateStatusBar('Connecting to custom data source...');
+                    
+                    if (!config.fetchData || typeof config.fetchData !== 'function') {
+                        throw new Error('Custom source must provide fetchData function');
+                    }
+
+                    const data = await config.fetchData();
+                    
+                    this.dataSource = {
+                        type: 'custom',
+                        config: config,
+                        lastFetched: new Date()
+                    };
+
+                    await this.bindToJSON(data, config.tableName || 'custom_data');
+                    this.showSuccessMessage(`Successfully bound to custom source: ${data.length} records loaded`);
+                    
+                } catch (error) {
+                    console.error('Custom source binding failed:', error);
+                    this.showErrorMessage(`Custom source binding failed: ${error.message}`);
+                }
+            }
+
+            /**
+             * Execute custom SQL query and bind results
+             * @param {string} sql - SQL query
+             * @param {string} tableName - Name for results table
+             */
+            async bindToCustomSQL(sql, tableName = 'query_results') {
+                try {
+                    this.updateStatusBar('Executing custom SQL...');
+                    
+                    const result = this.database.exec(sql);
+                    if (result.length === 0) {
+                        throw new Error('Query returned no results');
+                    }
+
+                    const data = result[0].values.map(row => {
+                        const obj = {};
+                        result[0].columns.forEach((col, index) => {
+                            obj[col] = row[index];
+                        });
+                        return obj;
+                    });
+
+                    this.records = data;
+                    this.columns = result[0].columns;
+                    this.applyFiltersAndSearch();
+                    this.renderDataGrid();
+                    
+                    this.showSuccessMessage(`Custom SQL executed: ${data.length} records loaded`);
+                    
+                } catch (error) {
+                    console.error('Custom SQL failed:', error);
+                    this.showErrorMessage(`Custom SQL failed: ${error.message}`);
+                }
+            }
+
+            /**
+             * Enable real-time updates via WebSocket
+             * @param {string} wsUrl - WebSocket URL
+             */
+            enableRealTimeUpdates(wsUrl) {
+                try {
+                    const ws = new WebSocket(wsUrl);
+                    
+                    ws.onmessage = (event) => {
+                        const update = JSON.parse(event.data);
+                        this.handleRealTimeUpdate(update);
+                    };
+                    
+                    ws.onerror = (error) => {
+                        console.error('WebSocket error:', error);
+                        this.showErrorMessage('Real-time connection failed');
+                    };
+                    
+                    this.showSuccessMessage('Real-time updates enabled');
+                    
+                } catch (error) {
+                    console.error('WebSocket setup failed:', error);
+                    this.showErrorMessage('Failed to enable real-time updates');
+                }
+            }
+
+            /**
+             * Enable periodic polling for updates
+             * @param {string} url - Polling URL
+             * @param {number} interval - Polling interval in milliseconds
+             */
+            enablePolling(url, interval = 30000) {
+                if (this.autoRefreshInterval) {
+                    clearInterval(this.autoRefreshInterval);
+                }
+                
+                this.autoRefreshInterval = setInterval(async () => {
+                    try {
+                        await this.refreshFromSource();
+                    } catch (error) {
+                        console.error('Polling update failed:', error);
+                    }
+                }, interval);
+                
+                this.showSuccessMessage(`Polling enabled: ${interval/1000}s intervals`);
+            }
+
+            /**
+             * Refresh data from the current source
+             */
+            async refreshFromSource() {
+                if (!this.dataSource) {
+                    this.showErrorMessage('No data source configured');
+                    return;
+                }
+
+                try {
+                    switch (this.dataSource.type) {
+                        case 'api':
+                            await this.bindToAPI(this.dataSource.url, this.dataSource.config);
+                            break;
+                        case 'custom':
+                            await this.bindToCustomSource(this.dataSource.config);
+                            break;
+                        default:
+                            this.showErrorMessage('Unknown data source type');
+                    }
+                } catch (error) {
+                    console.error('Refresh failed:', error);
+                    this.showErrorMessage(`Refresh failed: ${error.message}`);
+                }
+            }
+
+            // ================================
+            // HELPER METHODS
+            // ================================
+
+			async createTableFromData(data, tableName) {
+				// Drop existing table
+				try {
+					this.database.run(`DROP TABLE IF EXISTS ${tableName}`);
+				} catch (e) { /* ignore */ }
+
+				// Analyze first few rows to determine column types
+				const sampleSize = Math.min(data.length, 10);
+				const columnTypes = {};
+				
+				Object.keys(data[0]).forEach(key => {
+					const samples = data.slice(0, sampleSize).map(row => row[key]);
+					columnTypes[key] = this.inferColumnType(samples);
+				});
+
+				// Build column definitions
+				const hasId = Object.keys(data[0]).includes('id');
+				const columns = Object.entries(columnTypes)
+					.map(([name, type]) => `${name} ${type}`)
+					.join(', ');
+
+				// If data already has an id column, don’t add another
+				const createSQL = hasId
+					? `CREATE TABLE ${tableName} (${columns})`
+					: `CREATE TABLE ${tableName} (id INTEGER PRIMARY KEY AUTOINCREMENT, ${columns})`;
+
+				this.log(`📐 Creating table with SQL: ${createSQL}`);
+				this.database.run(createSQL);
+			}
+
+            async insertDataIntoTable(data, tableName) {
+                const columns = Object.keys(data[0]);
+                const placeholders = columns.map(() => '?').join(', ');
+                const sql = `INSERT INTO ${tableName} (${columns.join(', ')}) VALUES (${placeholders})`;
+
+                this.log(`📥 Inserting ${data.length} records with SQL: ${sql}`);
+
+                data.forEach((row, index) => {
+                    try {
+                        const values = columns.map(col => row[col]);
+                        this.database.run(sql, values);
+                        if (index < 3) { // Log first 3 insertions for debugging
+                            this.log(`✅ Inserted record ${index + 1}:`, JSON.stringify(row));
+                        }
+                    } catch (error) {
+                        this.log(`❌ Failed to insert record ${index + 1}:`, error.message);
+                        throw error;
+                    }
+                });
+
+                this.log(`✅ Successfully inserted all ${data.length} records`);
+            }
+
+            inferColumnType(samples) {
+                const nonNullSamples = samples.filter(s => s !== null && s !== undefined);
+                if (nonNullSamples.length === 0) return 'TEXT';
+
+                const firstSample = nonNullSamples[0];
+                
+                if (typeof firstSample === 'number') return 'REAL';
+                if (typeof firstSample === 'boolean') return 'BOOLEAN';
+                if (firstSample instanceof Date) return 'DATE';
+                
+                // Check if it's a date string
+                if (typeof firstSample === 'string' && !isNaN(Date.parse(firstSample))) {
+                    return 'DATE';
+                }
+                
+                // Check if it's a number string
+                if (typeof firstSample === 'string' && !isNaN(parseFloat(firstSample))) {
+                    return 'REAL';
+                }
+                
+                return 'TEXT';
+            }
+
+            parseCSVLine(line) {
+                const result = [];
+                let current = '';
+                let inQuotes = false;
+                
+                for (let i = 0; i < line.length; i++) {
+                    const char = line[i];
+                    
+                    if (char === '"') {
+                        inQuotes = !inQuotes;
+                    } else if (char === ',' && !inQuotes) {
+                        result.push(current.trim());
+                        current = '';
+                    } else {
+                        current += char;
+                    }
+                }
+                
+                result.push(current.trim());
+                return result.map(val => val.replace(/^"|"$/g, ''));
+            }
+
+            handleRealTimeUpdate(update) {
+                // Handle different types of real-time updates
+                switch (update.type) {
+                    case 'insert':
+                        // Add new record
+                        break;
+                    case 'update':
+                        // Update existing record
+                        break;
+                    case 'delete':
+                        // Remove record
+                        break;
+                    case 'refresh':
+                        // Full refresh
+                        this.refreshFromSource();
+                        break;
+                }
+            }
+
+            // ================================
+            // UI DIALOGS
+            // ================================
+
+            showAPIBindingDialog() {
+                const url = prompt('Enter API URL:', 'https://jsonplaceholder.typicode.com/users');
+                if (url) {
+                    const dataPath = prompt('Data path (optional, e.g., "data.users"):', '');
+                    this.bindToAPI(url, { dataPath: dataPath || null });
+                }
+            }
+
+            showJSONBindingDialog() {
+                const jsonStr = prompt('Enter JSON data:', '[{"id":1,"name":"Test","email":"test@example.com"}]');
+                if (jsonStr) {
+                    try {
+                        const data = JSON.parse(jsonStr);
+                        this.bindToJSON(data);
+                    } catch (error) {
+                        this.showErrorMessage('Invalid JSON format');
+                    }
+                }
+            }
+
+            showCSVBindingDialog() {
+                const csvData = prompt('Enter CSV data:', 'name,email\nJohn,john@example.com\nJane,jane@example.com');
+                if (csvData) {
+                    this.bindToCSV(csvData);
+                }
+            }
+
+            showBindingHelp() {
+                const modal = document.getElementById('bindingHelpModal');
+                if (modal) {
+                    modal.style.display = 'flex';
+                }
+            }
+
+            hideBindingHelp() {
+                const modal = document.getElementById('bindingHelpModal');
+                if (modal) {
+                    modal.style.display = 'none';
+                }
+            }
+        }
+
+        // Initialize the system when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🎯 DOM loaded, creating DataGridManager...');
+            window.dataGridManager = new DataGridManager();
+            
+            // DEBUG: Add method to easily test API binding
+            window.testCustomerAPI = function() {
+                console.log('🔍 Testing customer API binding...');
+                console.log('System ready:', window.dataGridManager.systemReady);
+                
+                if (!window.dataGridManager.systemReady) {
+                    console.log('❌ System not ready yet, waiting 3 seconds...');
+                    setTimeout(() => {
+                        console.log('🔄 Retrying API binding...');
+                        window.dataGridManager.bindToAPI('https://compodex.com/api/data/customers');
+                    }, 3000);
+                } else {
+                    console.log('✅ System ready, binding to API...');
+                    window.dataGridManager.bindToAPI('https://compodex.com/api/data/customers');
+                }
+            };
+            
+            // AUTO-BIND to your customer API after initialization
+            // Uncomment this line to automatically load your customer data:
+            // setTimeout(() => window.testCustomerAPI(), 3000);
+        });
+
+        // Error tracking
+        window.addEventListener('error', (e) => {
+            if (e.message.includes('prepare')) {
+                console.error('🚨 DETECTED PREPARE ERROR - This should not happen in v2.0:', e);
+            }
+        });
+			
+    </script>
+</body>
+</html>
