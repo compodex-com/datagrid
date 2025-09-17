@@ -20,12 +20,13 @@ Since these features rely on paid token usage, they require a **separate commerc
 - 🔍 AI-powered query: Ask questions in natural language and get answers directly from your grid
 - 📊 AI-powered analytics: Summaries, insights, and intelligent filtering
 
+## ✨ More information
+For live demo, please click the following URL
+https://compodex.com/controls/datagrid
+
 ---
 
 ## 📦 Installation
 ```bash
 npm install @compodex/datagrid
 
-## ✨ More information
-For live demo, please click the following URL
-https://compodex.com/controls/datagrid
